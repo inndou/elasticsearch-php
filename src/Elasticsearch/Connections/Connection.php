@@ -164,7 +164,7 @@ class Connection implements ConnectionInterface
      * @param \Elasticsearch\Transport $transport
      * @return mixed
      */
-    public function performRequest($method, $uri, $params = null, $body = null, $options = [], Transport $transport = null)
+    public function performRequest($method, $uri, $params = null, $body = null, $options = [], ?Transport $transport = null)
     {
         if (isset($body) === true) {
             $body = $this->serializer->serialize($body);
@@ -207,7 +207,7 @@ class Connection implements ConnectionInterface
 
     private function wrapHandler(callable $handler, LoggerInterface $logger, LoggerInterface $tracer)
     {
-        return function (array $request, Connection $connection, Transport $transport = null, $options) use ($handler, $logger, $tracer) {
+        return function (array $request, Connection $connection, ?Transport $transport = null, $options = []) use ($handler, $logger, $tracer) {
 
             $this->lastRequest = [];
             $this->lastRequest['request'] = $request;
@@ -556,13 +556,13 @@ class Connection implements ConnectionInterface
         $exception = new MaxRetriesException($message);
         switch ($response['curl']['errno']) {
             case 6:
-                $exception = new CouldNotResolveHostException($message, null, $exception);
+                $exception = new CouldNotResolveHostException($message, 0, $exception);
                 break;
             case 7:
-                $exception = new CouldNotConnectToHost($message, null, $exception);
+                $exception = new CouldNotConnectToHost($message, 0, $exception);
                 break;
             case 28:
-                $exception = new OperationTimeoutException($message, null, $exception);
+                $exception = new OperationTimeoutException($message, 0, $exception);
                 break;
         }
 
@@ -605,7 +605,7 @@ class Connection implements ConnectionInterface
     private function process4xxError($request, $response, $ignore)
     {
         $statusCode = $response['status'];
-        $responseBody = $response['body'];
+        $responseBody = isset($response['body']) ? (string)$response['body'] : '';
 
         /** @var \Exception $exception */
         $exception = $this->tryDeserialize400Error($response);
@@ -653,7 +653,7 @@ class Connection implements ConnectionInterface
     private function process5xxError($request, $response, $ignore)
     {
         $statusCode = $response['status'];
-        $responseBody = $response['body'];
+        $responseBody = isset($response['body']) ? (string)$response['body'] : '';
 
         /** @var \Exception $exception */
         $exception = $this->tryDeserialize500Error($response);
@@ -729,10 +729,10 @@ class Connection implements ConnectionInterface
 
             // <2.0 "i just blew up" nonstructured exception
             // $error is an array but we don't know the format, reuse the response body instead
-            return new $errorClass($response['body'], $response['status']);
+            return new $errorClass((string)$response['body'], $response['status']);
         }
 
         // <2.0 "i just blew up" nonstructured exception
-        return new $errorClass($response['body']);
+        return new $errorClass(isset($response['body']) ? (string)$response['body'] : '');
     }
 }
