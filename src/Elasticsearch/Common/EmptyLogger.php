@@ -26,9 +26,9 @@ class EmptyLogger extends AbstractLogger implements LoggerInterface
      * @param string $message
      * @param array $context
      *
-     * @return null
+     * @return void
      */
-    public function log($level, $message, array $context = array())
+    public function log($level, $message, array $context = array()): void
     {
         return;
     }
